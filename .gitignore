@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment and sensitive credentials
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.local
+
+# SSL certificates and private keys
+certs/
+backend/certs/*.pem
+backend/certs/*.crt
+backend/certs/*.key
+!backend/certs/README.txt
+
+# Generated files and assets
+backend/qr_codes/*.png
+!backend/qr_codes/.gitkeep
+
+# Build and production outputs
+dist/
+build/
+*.log
+
+# OS and Editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
