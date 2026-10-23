@@ -1,37 +1,88 @@
-import React, { useState } from "react";
-import { Key, Edit, Lock, Users, LogOut, GraduationCap, Briefcase, QrCode } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Key,
+  Edit,
+  Lock,
+  Users,
+  LogOut,
+  GraduationCap,
+  Briefcase,
+  QrCode,
+  Menu,
+  X,
+  ChevronDown
+} from "lucide-react";
 
 /**
- * Navbar Component
- *
- * Refined styling:
- * - Solid, elegant dark slate background (#1e293b) across all pages
- * - Active nav item uses subtle translucent indigo pill with indigo border
- * - Inactive nav items remain translucent with crisp hover state (never stark white)
- * - Elevated dark dropdown card matching the header theme
- * - Prominent 'Scan Pass' action button for gate verification
+ * Navbar Component — Echelon Connect
+ * - Modern dark navy background (#0b132b / #0f172a) with rich purple accents (#8b5cf6 / #a855f7)
+ * - Custom EC Logo from /logo.png
+ * - Responsive hamburger drawer menu on mobile
+ * - Click-based accessible dropdowns with outside-click closing
+ * - Sticky header with backdrop blur
  */
 function Navbar({ currentUser, onNavigate, onLogout, currentPage, onOpenScanner }) {
   const [studentDropdownOpen, setStudentDropdownOpen] = useState(false);
   const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const studentRef = useRef(null);
+  const staffRef = useRef(null);
+  const userRef = useRef(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (studentRef.current && !studentRef.current.contains(e.target)) {
+        setStudentDropdownOpen(false);
+      }
+      if (staffRef.current && !staffRef.current.contains(e.target)) {
+        setStaffDropdownOpen(false);
+      }
+      if (userRef.current && !userRef.current.contains(e.target)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleNav = (page) => {
+    setMobileMenuOpen(false);
+    setStudentDropdownOpen(false);
+    setStaffDropdownOpen(false);
+    setUserDropdownOpen(false);
+    onNavigate(page);
+  };
 
   return (
     <>
-      <header style={styles.header}>
-        <div style={styles.container}>
+      <header className="navbar-header">
+        <div className="navbar-container">
           {/* Brand Logo & Title */}
-          <div style={styles.brand} onClick={() => onNavigate("home")}>
-            <div style={styles.logoBadge}>EC</div>
-            <span style={styles.brandName}>EchelonConnect</span>
+          <div className="navbar-brand" onClick={() => handleNav("home")}>
+            <img
+              src="/logo.png"
+              alt="Echelon Connect Logo"
+              className="navbar-logo-img"
+              onError={(e) => {
+                e.target.style.display = "none";
+                const fallback = e.target.parentElement.querySelector(".navbar-logo-fallback");
+                if (fallback) fallback.style.display = "flex";
+              }}
+            />
+            <div className="navbar-logo-fallback" style={{ display: "none" }}>EC</div>
+            <span className="navbar-brand-name">
+              Echelon<span className="brand-purple">Connect</span>
+            </span>
           </div>
 
-          {/* Navigation Links */}
-          <nav style={styles.navLinks}>
-
-            {/* Scan Pass Button (Always accessible or prominent for quick gate verification) */}
+          {/* Desktop Navigation Links */}
+          <nav className="navbar-nav-desktop">
+            {/* Scan Pass Button */}
             <button
-              style={styles.scanPassBtn}
+              className="navbar-scan-btn"
               onClick={onOpenScanner}
               title="Scan or Verify Student Gate Pass"
             >
@@ -39,215 +90,324 @@ function Navbar({ currentUser, onNavigate, onLogout, currentPage, onOpenScanner 
               <span>Scan Pass</span>
             </button>
 
-            {/* Home — active when currentPage is exactly 'home' */}
+            {/* Home link */}
             <button
-              style={{
-                ...styles.navItem,
-                ...(currentPage === "home" ? styles.navItemActive : {}),
-              }}
-              onClick={() => onNavigate("home")}
+              className={`navbar-item ${currentPage === "home" ? "active" : ""}`}
+              onClick={() => handleNav("home")}
             >
               Home
             </button>
 
             {!currentUser ? (
               <>
-                {/* Student Dropdown (pre-login) */}
-                <div
-                  style={styles.dropdownWrapper}
-                  onMouseEnter={() => setStudentDropdownOpen(true)}
-                  onMouseLeave={() => setStudentDropdownOpen(false)}
-                >
+                {/* Student Dropdown (Click-based) */}
+                <div className="navbar-dropdown-wrap" ref={studentRef}>
                   <button
-                    style={{
-                      ...styles.navItem,
-                      ...(currentPage === "student-login" || currentPage === "student-signup"
-                        ? styles.navItemActive
-                        : {}),
+                    className={`navbar-item ${
+                      currentPage === "student-login" || currentPage === "student-signup" ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      setStudentDropdownOpen(!studentDropdownOpen);
+                      setStaffDropdownOpen(false);
                     }}
                   >
-                    Student ▾
+                    <span>Student</span>
+                    <ChevronDown size={14} className={`chevron ${studentDropdownOpen ? "open" : ""}`} />
                   </button>
+
                   {studentDropdownOpen && (
-                    /* paddingTop bridges the visual gap — no actual gap between button and menu */
-                    <div style={styles.dropdownOuter}>
-                      <div style={styles.dropdownMenu}>
-                        <button
-                          style={styles.dropdownItem}
-                          onClick={() => {
-                            setStudentDropdownOpen(false);
-                            onNavigate("student-login");
-                          }}
-                        >
-                          <Key size={14} style={styles.dropdownIcon} /> Student Login
-                        </button>
-                        <button
-                          style={styles.dropdownItem}
-                          onClick={() => {
-                            setStudentDropdownOpen(false);
-                            onNavigate("student-signup");
-                          }}
-                        >
-                          <Edit size={14} style={styles.dropdownIcon} /> Student Sign Up
-                        </button>
-                      </div>
+                    <div className="navbar-dropdown-menu">
+                      <button
+                        className="navbar-dropdown-item"
+                        onClick={() => handleNav("student-login")}
+                      >
+                        <Key size={15} className="item-icon" />
+                        <span>Student Login</span>
+                      </button>
+                      <button
+                        className="navbar-dropdown-item"
+                        onClick={() => handleNav("student-signup")}
+                      >
+                        <Edit size={15} className="item-icon" />
+                        <span>Student Sign Up</span>
+                      </button>
                     </div>
                   )}
                 </div>
 
-                {/* Staff Dropdown (pre-login) */}
-                <div
-                  style={styles.dropdownWrapper}
-                  onMouseEnter={() => setStaffDropdownOpen(true)}
-                  onMouseLeave={() => setStaffDropdownOpen(false)}
-                >
+                {/* Staff Dropdown (Click-based) */}
+                <div className="navbar-dropdown-wrap" ref={staffRef}>
                   <button
-                    style={{
-                      ...styles.navItem,
-                      ...(currentPage === "staff-login" || currentPage === "staff-signup"
-                        ? styles.navItemActive
-                        : {}),
+                    className={`navbar-item ${
+                      currentPage === "staff-login" || currentPage === "staff-signup" ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      setStaffDropdownOpen(!staffDropdownOpen);
+                      setStudentDropdownOpen(false);
                     }}
                   >
-                    Staff ▾
+                    <span>Staff</span>
+                    <ChevronDown size={14} className={`chevron ${staffDropdownOpen ? "open" : ""}`} />
                   </button>
+
                   {staffDropdownOpen && (
-                    <div style={styles.dropdownOuter}>
-                      <div style={styles.dropdownMenu}>
-                        <button
-                          style={styles.dropdownItem}
-                          onClick={() => {
-                            setStaffDropdownOpen(false);
-                            onNavigate("staff-login");
-                          }}
-                        >
-                          <Lock size={14} style={styles.dropdownIcon} /> Staff Login
-                        </button>
-                        <button
-                          style={styles.dropdownItem}
-                          onClick={() => {
-                            setStaffDropdownOpen(false);
-                            onNavigate("staff-signup");
-                          }}
-                        >
-                          <Users size={14} style={styles.dropdownIcon} /> Staff Sign Up
-                        </button>
-                      </div>
+                    <div className="navbar-dropdown-menu">
+                      <button
+                        className="navbar-dropdown-item"
+                        onClick={() => handleNav("staff-login")}
+                      >
+                        <Lock size={15} className="item-icon" />
+                        <span>Staff Login</span>
+                      </button>
+                      <button
+                        className="navbar-dropdown-item"
+                        onClick={() => handleNav("staff-signup")}
+                      >
+                        <Users size={15} className="item-icon" />
+                        <span>Staff Sign Up</span>
+                      </button>
                     </div>
                   )}
                 </div>
               </>
             ) : currentUser.user_type === "student" ? (
               <>
-                {/* Student Post-Login Nav Links */}
+                {/* Student logged-in navigation */}
                 <button
-                  style={{
-                    ...styles.navItem,
-                    ...(currentPage === "request-form" ? styles.navItemActive : {}),
-                  }}
-                  onClick={() => onNavigate("request-form")}
+                  className={`navbar-item ${currentPage === "request-form" ? "active" : ""}`}
+                  onClick={() => handleNav("request-form")}
                 >
                   Request
                 </button>
                 <button
-                  style={{
-                    ...styles.navItem,
-                    ...(currentPage === "student-dashboard" ? styles.navItemActive : {}),
-                  }}
-                  onClick={() => onNavigate("student-dashboard")}
+                  className={`navbar-item ${currentPage === "student-dashboard" ? "active" : ""}`}
+                  onClick={() => handleNav("student-dashboard")}
                 >
                   My Requests
                 </button>
 
-                {/* Student Profile Dropdown */}
-                <div
-                  style={styles.dropdownWrapper}
-                  onMouseEnter={() => setUserDropdownOpen(true)}
-                  onMouseLeave={() => setUserDropdownOpen(false)}
-                >
-                  <button style={styles.userButton}>
-                    <span style={styles.avatarMini}>
+                {/* Student Profile */}
+                <div className="navbar-dropdown-wrap" ref={userRef}>
+                  <button
+                    className="navbar-user-btn"
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  >
+                    <span className="navbar-avatar-mini">
                       {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : "S"}
                     </span>
-                    {currentUser.name} ▾
+                    <span className="navbar-user-name">{currentUser.name}</span>
+                    <ChevronDown size={13} className={`chevron ${userDropdownOpen ? "open" : ""}`} />
                   </button>
+
                   {userDropdownOpen && (
-                    <div style={styles.dropdownOuter}>
-                      <div style={styles.dropdownMenu}>
-                        <div style={styles.dropdownUserInfo}>
-                          <strong>{currentUser.name}</strong>
-                          <span>{currentUser.register_number}</span>
-                        </div>
-                        <div style={styles.dropdownDivider} />
-                        <button style={styles.dropdownItemDanger} onClick={onLogout}>
-                          <LogOut size={14} style={styles.dropdownIcon} /> Log out
-                        </button>
+                    <div className="navbar-dropdown-menu right-aligned">
+                      <div className="navbar-user-info">
+                        <strong>{currentUser.name}</strong>
+                        <span>{currentUser.register_number}</span>
                       </div>
+                      <div className="navbar-divider" />
+                      <button
+                        className="navbar-dropdown-item danger"
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onLogout();
+                        }}
+                      >
+                        <LogOut size={15} className="item-icon" />
+                        <span>Log out</span>
+                      </button>
                     </div>
                   )}
                 </div>
               </>
             ) : (
               <>
-                {/* Staff Post-Login Nav Links */}
+                {/* Staff logged-in navigation */}
                 <button
-                  style={{
-                    ...styles.navItem,
-                    ...(currentPage === "staff-dashboard" ? styles.navItemActive : {}),
-                  }}
-                  onClick={() => onNavigate("staff-dashboard")}
+                  className={`navbar-item ${currentPage === "staff-dashboard" ? "active" : ""}`}
+                  onClick={() => handleNav("staff-dashboard")}
                 >
                   Dashboard
                 </button>
 
-                {/* Staff Profile Dropdown */}
-                <div
-                  style={styles.dropdownWrapper}
-                  onMouseEnter={() => setUserDropdownOpen(true)}
-                  onMouseLeave={() => setUserDropdownOpen(false)}
-                >
-                  <button style={styles.userButton}>
-                    <span style={styles.avatarMini}>
+                {/* Staff Profile */}
+                <div className="navbar-dropdown-wrap" ref={userRef}>
+                  <button
+                    className="navbar-user-btn"
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  >
+                    <span className="navbar-avatar-mini staff">
                       {currentUser.role ? currentUser.role.charAt(0).toUpperCase() : "T"}
                     </span>
-                    {currentUser.name} ({currentUser.role?.toUpperCase()}) ▾
+                    <span className="navbar-user-name">
+                      {currentUser.name} ({currentUser.role?.toUpperCase()})
+                    </span>
+                    <ChevronDown size={13} className={`chevron ${userDropdownOpen ? "open" : ""}`} />
                   </button>
+
                   {userDropdownOpen && (
-                    <div style={styles.dropdownOuter}>
-                      <div style={styles.dropdownMenu}>
-                        <div style={styles.dropdownUserInfo}>
-                          <strong>{currentUser.name}</strong>
-                          <span>
-                            {currentUser.role?.toUpperCase()}
-                            {currentUser.department ? ` • ${currentUser.department}` : ""}
-                          </span>
-                        </div>
-                        <div style={styles.dropdownDivider} />
-                        <button style={styles.dropdownItemDanger} onClick={onLogout}>
-                          <LogOut size={14} style={styles.dropdownIcon} /> Log out
-                        </button>
+                    <div className="navbar-dropdown-menu right-aligned">
+                      <div className="navbar-user-info">
+                        <strong>{currentUser.name}</strong>
+                        <span>
+                          {currentUser.role?.toUpperCase()}
+                          {currentUser.department ? ` • ${currentUser.department}` : ""}
+                        </span>
                       </div>
+                      <div className="navbar-divider" />
+                      <button
+                        className="navbar-dropdown-item danger"
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onLogout();
+                        }}
+                      >
+                        <LogOut size={15} className="item-icon" />
+                        <span>Log out</span>
+                      </button>
                     </div>
                   )}
                 </div>
               </>
             )}
           </nav>
+
+          {/* Mobile Right Icons (Scan Pass button + Hamburger toggle) */}
+          <div className="navbar-mobile-controls">
+            <button
+              className="navbar-scan-btn mobile-compact"
+              onClick={onOpenScanner}
+              title="Scan QR Pass"
+            >
+              <QrCode size={16} />
+              <span>Scan</span>
+            </button>
+
+            <button
+              className="navbar-hamburger-btn"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Drawer Navigation */}
+        {mobileMenuOpen && (
+          <div className="navbar-mobile-drawer">
+            <button
+              className={`navbar-mobile-item ${currentPage === "home" ? "active" : ""}`}
+              onClick={() => handleNav("home")}
+            >
+              Home
+            </button>
+
+            {!currentUser ? (
+              <>
+                <div className="navbar-mobile-section-title">STUDENT ACCESS</div>
+                <button
+                  className={`navbar-mobile-subitem ${currentPage === "student-login" ? "active" : ""}`}
+                  onClick={() => handleNav("student-login")}
+                >
+                  <Key size={16} />
+                  <span>Student Login</span>
+                </button>
+                <button
+                  className={`navbar-mobile-subitem ${currentPage === "student-signup" ? "active" : ""}`}
+                  onClick={() => handleNav("student-signup")}
+                >
+                  <Edit size={16} />
+                  <span>Student Sign Up</span>
+                </button>
+
+                <div className="navbar-mobile-section-title">STAFF ACCESS</div>
+                <button
+                  className={`navbar-mobile-subitem ${currentPage === "staff-login" ? "active" : ""}`}
+                  onClick={() => handleNav("staff-login")}
+                >
+                  <Lock size={16} />
+                  <span>Staff Login</span>
+                </button>
+                <button
+                  className={`navbar-mobile-subitem ${currentPage === "staff-signup" ? "active" : ""}`}
+                  onClick={() => handleNav("staff-signup")}
+                >
+                  <Users size={16} />
+                  <span>Staff Sign Up</span>
+                </button>
+              </>
+            ) : currentUser.user_type === "student" ? (
+              <>
+                <div className="navbar-mobile-section-title">PORTAL ACTIONS</div>
+                <button
+                  className={`navbar-mobile-item ${currentPage === "request-form" ? "active" : ""}`}
+                  onClick={() => handleNav("request-form")}
+                >
+                  Submit New Request
+                </button>
+                <button
+                  className={`navbar-mobile-item ${currentPage === "student-dashboard" ? "active" : ""}`}
+                  onClick={() => handleNav("student-dashboard")}
+                >
+                  My Requests &amp; Passes
+                </button>
+                <div className="navbar-divider" style={{ margin: "12px 0" }} />
+                <button
+                  className="navbar-mobile-item danger"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Log out ({currentUser.name})</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="navbar-mobile-section-title">STAFF ACTIONS</div>
+                <button
+                  className={`navbar-mobile-item ${currentPage === "staff-dashboard" ? "active" : ""}`}
+                  onClick={() => handleNav("staff-dashboard")}
+                >
+                  Staff Dashboard
+                </button>
+                <div className="navbar-divider" style={{ margin: "12px 0" }} />
+                <button
+                  className="navbar-mobile-item danger"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                >
+                  <LogOut size={16} />
+                  <span>Log out ({currentUser.name})</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Sub-bar: user context info when logged in */}
       {currentUser && (
-        <div style={styles.subBar}>
-          <div style={styles.subBarContainer}>
-            <span style={styles.subBarBadge}>
+        <div className="navbar-subbar">
+          <div className="navbar-subbar-container">
+            <span className="navbar-subbar-badge">
               {currentUser.user_type === "student" ? (
-                <><GraduationCap size={12} style={{verticalAlign: "middle", marginRight: "4px", marginTop: "-2px"}} /> STUDENT</>
+                <>
+                  <GraduationCap size={13} style={{ verticalAlign: "middle", marginRight: "4px" }} />
+                  STUDENT
+                </>
               ) : (
-                <><Briefcase size={12} style={{verticalAlign: "middle", marginRight: "4px", marginTop: "-2px"}} /> STAFF ({currentUser.role?.toUpperCase()})</>
+                <>
+                  <Briefcase size={13} style={{ verticalAlign: "middle", marginRight: "4px" }} />
+                  STAFF ({currentUser.role?.toUpperCase()})
+                </>
               )}
             </span>
-            <span style={styles.subBarText}>
+            <span className="navbar-subbar-text">
               Signed in as <strong>{currentUser.name}</strong>
               {currentUser.department ? ` • ${currentUser.department}` : ""}
               {currentUser.accommodation_type
@@ -260,206 +420,5 @@ function Navbar({ currentUser, onNavigate, onLogout, currentPage, onOpenScanner 
     </>
   );
 }
-
-const styles = {
-  header: {
-    backgroundColor: "#1e293b",
-    borderBottom: "1px solid #334155",
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-  },
-  container: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "12px 24px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    cursor: "pointer",
-  },
-  logoBadge: {
-    width: "38px",
-    height: "38px",
-    borderRadius: "8px",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "800",
-    fontSize: "15px",
-    letterSpacing: "0.05em",
-    boxShadow: "0 2px 8px rgba(37, 99, 235, 0.4)",
-  },
-  brandName: {
-    color: "#ffffff",
-    fontSize: "20px",
-    fontWeight: "700",
-    letterSpacing: "-0.02em",
-  },
-  navLinks: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  },
-  scanPassBtn: {
-    backgroundColor: "#4f46e5",
-    color: "#ffffff",
-    border: "1px solid #6366f1",
-    fontSize: "13px",
-    fontWeight: "700",
-    padding: "7px 14px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    marginRight: "6px",
-    boxShadow: "0 2px 8px rgba(79, 70, 229, 0.35)",
-    transition: "all 0.15s ease",
-    fontFamily: "inherit",
-  },
-  navItem: {
-    background: "transparent",
-    border: "none",
-    color: "#cbd5e1",
-    fontSize: "14px",
-    fontWeight: "600",
-    padding: "8px 14px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    transition: "all 0.15s ease",
-    fontFamily: "inherit",
-  },
-  navItemActive: {
-    color: "#ffffff",
-    backgroundColor: "rgba(99, 102, 241, 0.25)",
-    border: "1px solid rgba(99, 102, 241, 0.4)",
-  },
-  userButton: {
-    background: "#334155",
-    border: "1px solid #475569",
-    color: "#ffffff",
-    fontSize: "13px",
-    fontWeight: "600",
-    cursor: "pointer",
-    padding: "6px 14px",
-    borderRadius: "20px",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    transition: "all 0.15s ease",
-    fontFamily: "inherit",
-  },
-  avatarMini: {
-    width: "22px",
-    height: "22px",
-    borderRadius: "50%",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "11px",
-    fontWeight: "700",
-  },
-  dropdownWrapper: {
-    position: "relative",
-  },
-  dropdownOuter: {
-    position: "absolute",
-    top: "100%",
-    right: 0,
-    paddingTop: "6px",
-    zIndex: 1000,
-    minWidth: "190px",
-  },
-  dropdownMenu: {
-    backgroundColor: "#1e293b",
-    borderRadius: "8px",
-    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.2)",
-    border: "1px solid #334155",
-    overflow: "hidden",
-    padding: "6px 0",
-  },
-  dropdownUserInfo: {
-    padding: "10px 14px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-    fontSize: "12px",
-    color: "#94a3b8",
-  },
-  dropdownDivider: {
-    height: "1px",
-    backgroundColor: "#334155",
-    margin: "4px 0",
-  },
-  dropdownItem: {
-    width: "100%",
-    padding: "9px 14px",
-    textAlign: "left",
-    background: "transparent",
-    border: "none",
-    fontSize: "13px",
-    fontWeight: "500",
-    color: "#e2e8f0",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    fontFamily: "inherit",
-    transition: "background-color 0.15s",
-  },
-  dropdownItemDanger: {
-    width: "100%",
-    padding: "9px 14px",
-    textAlign: "left",
-    background: "transparent",
-    border: "none",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#f87171",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    fontFamily: "inherit",
-  },
-  dropdownIcon: {
-    fontSize: "14px",
-  },
-  subBar: {
-    backgroundColor: "#f1f5f9",
-    borderBottom: "1px solid #e2e8f0",
-    padding: "8px 24px",
-  },
-  subBarContainer: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    fontSize: "13px",
-  },
-  subBarBadge: {
-    backgroundColor: "#e2e8f0",
-    color: "#334155",
-    padding: "2px 8px",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "700",
-    letterSpacing: "0.04em",
-  },
-  subBarText: {
-    color: "#475569",
-  },
-};
 
 export default Navbar;

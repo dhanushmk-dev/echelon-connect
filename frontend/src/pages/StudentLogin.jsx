@@ -26,7 +26,16 @@ function StudentLogin({ onAuthenticated, onNavigate }) {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error(
+          response.status === 504 || response.status === 502
+            ? "Cannot reach server. Please make sure the backend is running."
+            : `Server returned an invalid response (${response.status} ${response.statusText}). Is the backend running?`
+        );
+      }
 
       if (!response.ok) {
         throw new Error(data.message || "Invalid credentials.");

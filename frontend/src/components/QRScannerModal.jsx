@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Camera, X, CheckCircle, AlertTriangle, ArrowRight, Upload, KeyRound, ShieldCheck } from "lucide-react";
+import { X, CheckCircle, AlertTriangle, Upload, ShieldCheck } from "lucide-react";
 
 /**
  * QRScannerModal
@@ -9,8 +9,6 @@ import { Camera, X, CheckCircle, AlertTriangle, ArrowRight, Upload, KeyRound, Sh
  * Single-use: upon accepting, records scanned_at timestamp and expires the QR immediately.
  */
 export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
-  const [scanMode, setScanMode] = useState("camera"); // 'camera' | 'manual'
-  const [manualInput, setManualInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [passData, setPassData] = useState(null);
@@ -98,15 +96,14 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
     }
   };
 
-  const stopCamera = () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      scannerRef.current
-        .stop()
-        .then(() => {
-          setCameraActive(false);
-        })
-        .catch((err) => console.warn("Stop scanner error:", err));
-    } else {
+  const stopCamera = async () => {
+    try {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        await scannerRef.current.stop();
+      }
+    } catch (err) {
+      console.warn("Stop scanner error:", err);
+    } finally {
       setCameraActive(false);
     }
   };
@@ -118,14 +115,35 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
 
     setLoading(true);
     setErrorMsg("");
+
+    // CRITICAL: Must await the asynchronous camera stop before calling scanFile
+    await stopCamera();
+
     try {
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode("reader-canvas");
       }
-      const decodedText = await scannerRef.current.scanFile(file, true);
-      await verifyToken(decodedText);
+      
+      let decodedText;
+      try {
+        decodedText = await scannerRef.current.scanFile(file, false);
+      } catch (err1) {
+        // Fallback retry with showImage=true
+        try {
+          decodedText = await scannerRef.current.scanFile(file, true);
+        } catch (err2) {
+          throw new Error("Could not detect any QR code in the uploaded image.");
+        }
+      }
+
+      if (decodedText) {
+        await verifyToken(decodedText);
+      } else {
+        setErrorMsg("Could not detect any QR code in the uploaded image.");
+      }
     } catch (err) {
-      setErrorMsg("Could not detect any QR code in the uploaded image.");
+      console.warn("Scan file error:", err);
+      setErrorMsg("Could not detect any QR code in the uploaded image. Please ensure the QR is sharp and well lit.");
     } finally {
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -168,8 +186,6 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
     setScannedToken(null);
     setCompleted(false);
     setErrorMsg("");
-    setManualInput("");
-    setScanMode("camera");
   };
 
   const handleClose = () => {
@@ -178,7 +194,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
   };
 
   useEffect(() => {
-    if (isOpen && scanMode === "camera" && !passData && !completed) {
+    if (isOpen && !passData && !completed) {
       // Small delay to ensure DOM element exists
       const timer = setTimeout(() => {
         startCamera();
@@ -190,7 +206,7 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
     } else {
       stopCamera();
     }
-  }, [isOpen, scanMode, passData, completed]);
+  }, [isOpen, passData, completed]);
 
   if (!isOpen) return null;
 
@@ -204,45 +220,14 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
               <ShieldCheck size={22} color="#4f46e5" />
             </div>
             <div>
-              <h3 style={styles.headerTitle}>Gate Pass QR Verification</h3>
-              <p style={styles.headerSubtitle}>Scan or verify student pass for 1-time gate exit</p>
+              <h3 style={styles.headerTitle}>Gate Pass QR Scanner</h3>
+              <p style={styles.headerSubtitle}>Point camera at student QR pass for 1-time gate exit verification</p>
             </div>
           </div>
           <button style={styles.closeBtn} onClick={handleClose}>
             <X size={20} />
           </button>
         </div>
-
-        {/* Tab Switcher */}
-        {!passData && !completed && (
-          <div style={styles.tabBar}>
-            <button
-              style={{
-                ...styles.tabBtn,
-                ...(scanMode === "camera" ? styles.tabBtnActive : {}),
-              }}
-              onClick={() => {
-                setErrorMsg("");
-                setScanMode("camera");
-              }}
-            >
-              <Camera size={16} /> Live Camera Scan
-            </button>
-            <button
-              style={{
-                ...styles.tabBtn,
-                ...(scanMode === "manual" ? styles.tabBtnActive : {}),
-              }}
-              onClick={() => {
-                stopCamera();
-                setErrorMsg("");
-                setScanMode("manual");
-              }}
-            >
-              <KeyRound size={16} /> Token / Link Entry
-            </button>
-          </div>
-        )}
 
         {/* Error Alert */}
         {errorMsg && (
@@ -363,12 +348,12 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
                 </button>
               </div>
             </div>
-          ) : scanMode === "camera" ? (
+          ) : (
             /* Live Camera View */
             <div style={styles.cameraBox}>
               <div id="reader-canvas" style={styles.canvas}></div>
               <p style={styles.cameraHelper}>
-                Point camera at the student's QR code on their screen or paper pass.
+                Point camera at the student's QR pass to record gate exit.
               </p>
               <div style={styles.uploadRow}>
                 <input
@@ -386,35 +371,6 @@ export default function QRScannerModal({ isOpen, onClose, onScanSuccess }) {
                   <Upload size={14} /> Or Upload QR Image
                 </button>
               </div>
-            </div>
-          ) : (
-            /* Manual Token / Link Entry */
-            <div style={styles.manualBox}>
-              <label style={styles.manualLabel}>
-                Paste QR Verification URL or 48-char Token:
-              </label>
-              <div style={styles.inputRow}>
-                <input
-                  type="text"
-                  placeholder="e.g. http://localhost:5173/verify/3f8a... or 3f8a92..."
-                  value={manualInput}
-                  onChange={(e) => setManualInput(e.target.value)}
-                  style={styles.manualInput}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") verifyToken(manualInput);
-                  }}
-                />
-                <button
-                  style={styles.verifyBtn}
-                  onClick={() => verifyToken(manualInput)}
-                  disabled={loading || !manualInput.trim()}
-                >
-                  {loading ? "Checking..." : "Verify Pass"} <ArrowRight size={16} />
-                </button>
-              </div>
-              <p style={styles.manualTip}>
-                Tip: Gate security can type or paste the verification link directly from mobile or terminal.
-              </p>
             </div>
           )}
         </div>
@@ -494,31 +450,6 @@ const styles = {
     cursor: "pointer",
     color: "#64748b",
   },
-  tabBar: {
-    display: "flex",
-    borderBottom: "1px solid #e2e8f0",
-    backgroundColor: "#f8fafc",
-  },
-  tabBtn: {
-    flex: 1,
-    padding: "12px 16px",
-    border: "none",
-    background: "transparent",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#64748b",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    borderBottom: "2px solid transparent",
-  },
-  tabBtnActive: {
-    color: "#4f46e5",
-    backgroundColor: "#ffffff",
-    borderBottom: "2px solid #4f46e5",
-  },
   errorBox: {
     margin: "16px 24px 0",
     padding: "12px 14px",
@@ -572,46 +503,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-  },
-  manualBox: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  manualLabel: {
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#334155",
-  },
-  inputRow: {
-    display: "flex",
-    gap: "8px",
-  },
-  manualInput: {
-    flex: 1,
-    padding: "10px 14px",
-    borderRadius: "8px",
-    border: "1px solid #cbd5e1",
-    fontSize: "13px",
-    outline: "none",
-  },
-  verifyBtn: {
-    backgroundColor: "#4f46e5",
-    color: "#ffffff",
-    border: "none",
-    padding: "10px 16px",
-    borderRadius: "8px",
-    fontWeight: "600",
-    fontSize: "13px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-  manualTip: {
-    fontSize: "12px",
-    color: "#94a3b8",
-    margin: "4px 0 0",
   },
   detailsView: {
     display: "flex",

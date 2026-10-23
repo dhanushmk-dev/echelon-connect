@@ -19,9 +19,10 @@ Once an application is approved through its required hierarchy, the system gener
 ## 2. Features
 
 - **Global Navigation Bar:**
-  - Modern dark slate navigation header with responsive branding.
-  - Prominent, glowing **"Scan Pass / QR"** action button accessible across all pages.
-  - Active page indicator and smooth role-based routing.
+  - Modern deep navy navigation header with vibrant purple accents and custom EC brand logo.
+  - Prominent, glowing **"Scan Pass"** purple action button accessible across all pages.
+  - Accessible click-based dropdowns with auto-closing on outside click.
+  - Responsive mobile hamburger drawer menu for screens under 860px.
 
 - **Interactive Staff & Advisor Dashboard:**
   - **Filter & Stat Chips:** Quick visual metrics for total, pending, approved, and rejected requests.
@@ -39,10 +40,10 @@ Once an application is approved through its required hierarchy, the system gener
   - Modal viewer for the generated QR Gate Pass barcode.
 
 - **QR Scanner & Gate Verification Modal:**
-  - **Live Camera Viewfinder:** Real-time scanning powered by `html5-qrcode`.
-  - **File Upload & Token Input:** Fallback image QR reader and manual token entry tab.
-  - **Valid Pass Card Preview:** Displays student photo placeholder, department, room, and allowed exit window before checkout.
-  - **"Accept & Record Exit":** Single-click gate exit recording that updates `scanned_at` in the database and voids the pass.
+  - **Camera-First Viewfinder:** Live scanning opens immediately via device camera powered by `html5-qrcode`.
+  - **Smooth QR File Upload:** Instant image upload fallback with asynchronous camera cleanup to prevent canvas decoding conflicts.
+  - **Valid Pass Card Preview:** Displays student details, department, room, and allowed exit window before checkout.
+  - **"Accept & Record Exit":** Single-click gate exit recording that updates `scanned_at` in the database and voids the pass immediately.
 
 - **Public Gate Check Page (`/verify/:token`):**
   - Standalone, high-contrast, mobile-first screen for gate guards scanning with external smartphones.
@@ -120,9 +121,12 @@ During the latest development cycle, the application underwent a full database m
 - **`backend/certs/` & `.gitignore`**: Created certificate handling folder and secured all private keys, `.env` files, and generated QR assets against GitHub commits.
 
 ### 2. Frontend UI Overhaul (Presentation & Styling)
-- **`frontend/src/index.css`**: Built a complete CSS custom properties design token system (colors, gradients, shadows, radius scales, animations like `fadeIn`, `scaleIn`, and `pulse-glow`).
+- **`frontend/src/components/Navbar.jsx` & `frontend/public/logo.png`**: Replaced generic badge with custom EC logo. Rebuilt with deep navy (`#0b132b`) and purple accents (`#7c3aed`), click-based dropdown menus with outside-click closing, and a responsive mobile hamburger drawer.
+- **`frontend/src/components/QRScannerModal.jsx`**: Streamlined into a camera-first scanner by removing the confusing manual token entry tab. Fixed the canvas conflict during QR image uploads by ensuring asynchronous camera shutdown before decoding images.
+- **`frontend/src/pages/*Login.jsx` & `*SignUp.jsx`**: Added robust API response validation so users receive clear, helpful messages (*"Cannot reach server. Please make sure the backend is running."*) instead of cryptic JSON parsing crashes.
+- **`frontend/src/index.css`**: Built a complete CSS custom properties design token system (colors, gradients, shadows, radius scales, animations like `fadeIn`, `scaleIn`, and `pulse-glow`), plus global mobile responsiveness rules.
 - **`frontend/src/pages/Home.jsx`**: Rebuilt with a mesh gradient hero, feature highlight cards with circular icon badges, and an interactive 4-step workflow indicator strip (*Student → Advisor → HOD → Warden*).
-- **`frontend/src/pages/StudentLogin.jsx` & `StaffLogin.jsx`**: Transformed into polished two-column split cards with branded indigo/teal panels and gradient CTA buttons.
+- **`frontend/src/pages/StudentLogin.jsx` & `StaffLogin.jsx`**: Transformed into polished two-column split cards with branded panels and gradient CTA buttons.
 - **`frontend/src/pages/StudentSignUp.jsx` & `StaffSignUp.jsx`**: Redesigned with organized section dividers, rounded inputs, clear hints, and improved accessibility.
 - **`frontend/src/pages/StudentDashboard.jsx`**: Enhanced with colored icon stat cards for metrics and an indigo gradient "New Request" button.
 - **`frontend/src/pages/StaffDashboard.jsx`**: Added a left-accented banner, status filter chips, and an animated glowing "Scan Pass" button.
